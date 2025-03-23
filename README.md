@@ -1,3 +1,21 @@
+.
+
+.
+
+[project has been taken over by binbin](https://github.com/binbinmods/Obeliskial-Essentials) (thank you!)
+
+apologies :')
+
+.
+
+.
+
+.
+
+.
+
+.
+
 # Obeliskial Essentials
 
 This is an **Across the Obelisk** mod that enables my other mods to work and communicate with each other. It includes a copy of sinai-dev's excellent [Configuration Manager](https://github.com/sinai-dev/BepInExConfigManager/). It also contains classes and methods that may be useful for other developers.
