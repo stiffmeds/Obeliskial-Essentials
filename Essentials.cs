@@ -51,7 +51,7 @@ namespace Obeliskial_Essentials
     public static Dictionary<string, string> medsCustomCardDescriptions = new();
     public static RewardsManager RewardsManagerInstance;
     internal static string medsVersionText = "";
-    public static readonly string[] vanillaSubclasses = { "mercenary", "sentinel", "berserker", "warden", "ranger", "assassin", "archer", "minstrel", "elementalist", "pyromancer", "loremaster", "warlock", "cleric", "priest", "voodoowitch", "prophet", "bandit", "fallen", "paladin", "queen" };
+    public static readonly string[] vanillaSubclasses = { "mercenary", "sentinel", "berserker", "warden", "ranger", "assassin", "archer", "minstrel", "elementalist", "pyromancer", "loremaster", "warlock", "cleric", "priest", "voodoowitch", "prophet", "bandit", "fallen", "paladin", "queen", "engineer", "valkyrie", "alchemist", "deathknight", "bloodmage", "priestess" };
     public static Dictionary<string, string> medsTexts = new();
     private static List<string> medsExportedSpritePaths = new();
     internal static int medsForceWeekly = 0;
