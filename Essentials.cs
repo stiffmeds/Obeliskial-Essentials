@@ -13,6 +13,7 @@ using Steamworks;
 using System.Threading.Tasks;
 using System;
 using System.Text;
+using UnityEngine.UI;
 
 
 /*
@@ -29,9 +30,10 @@ namespace Obeliskial_Essentials
         internal const int ModDate = 20240516;
         private readonly Harmony harmony = new(PluginInfo.PLUGIN_GUID);
         internal static ManualLogSource Log;
-
+        public static ConfigEntry<bool> EnableDebugLogging { get; private set; }
         public static ConfigEntry<bool> medsExportJSON { get; private set; }
         public static ConfigEntry<bool> medsExportSprites { get; private set; }
+        public static ConfigEntry<bool> medsExportNodePositions { get; private set; }
         public static ConfigEntry<bool> medsShowAtStart { get; private set; }
         public static ConfigEntry<bool> medsConsistency { get; private set; }
         public static ConfigEntry<bool> medsSkipLogos { get; private set; }
@@ -68,10 +70,12 @@ namespace Obeliskial_Essentials
         {
             Log = Logger;
             LogInfo($"{PluginInfo.PLUGIN_GUID} {PluginInfo.PLUGIN_VERSION} has loaded!");
+            EnableDebugLogging = Config.Bind(new ConfigDefinition("Debug", "Enable Debug Logging"), false, new ConfigDescription("Enable debug logging."));
             medsExportJSON = Config.Bind(new ConfigDefinition("Debug", "Export Vanilla Content"), false, new ConfigDescription("Export AtO class data to JSON files that are compatible with Obeliskial Content."));
             medsExportSprites = Config.Bind(new ConfigDefinition("Debug", "Export Sprites"), true, new ConfigDescription("Export sprites when exporting JSON files."));
             medsShowAtStart = Config.Bind(new ConfigDefinition("Debug", "Show At Start"), true, new ConfigDescription("Show the mod version window when the game loads."));
             medsConsistency = Config.Bind(new ConfigDefinition("Should Be Vanilla", "Disable Paradox Integration"), true, new ConfigDescription("Disable Paradox integration and telemetry (does not include launcher)."));
+            medsExportNodePositions = Config.Bind(new ConfigDefinition("Debug", "Export Node Positions"), false, new ConfigDescription("Export node positions to JSON and txt files. Runs when you start a run. Causes temporary lag."));
             medsSkipLogos = Config.Bind(new ConfigDefinition("Should Be Vanilla", "Skip Logos"), true, new ConfigDescription("Skip logos on startup."));
             UniverseLib.Universe.Init(1f, ObeliskialUI.InitUI, LogHandler, new()
             {
@@ -97,12 +101,18 @@ namespace Obeliskial_Essentials
         }
         internal static void LogDebug(string msg)
         {
-            Log.LogDebug(msg);
+            if (EnableDebugLogging.Value)
+            {
+                Log.LogDebug(msg);
+            }
+
         }
         internal static void LogInfo(string msg)
         {
             Log.LogInfo(msg);
         }
+
+
         internal static void LogWarning(string msg)
         {
             Log.LogWarning(msg);
@@ -149,7 +159,14 @@ namespace Obeliskial_Essentials
                 return;
             RenderTexture renderTex = RenderTexture.GetTemporary((int)spriteToExport.texture.width, (int)spriteToExport.texture.height, 0, RenderTextureFormat.Default, RenderTextureReadWrite.Linear);
             // we flip it when doing the Graphics.Blit because the sprites are packed (which... flips them? idk?)
-            Graphics.Blit(spriteToExport.texture, renderTex, new Vector2(1, -1), new Vector2(0, 1));
+            if (Environment.OSVersion.Platform == PlatformID.MacOSX)
+            {
+                Graphics.Blit(spriteToExport.texture, renderTex);//, new Vector2(1, -1), new Vector2(0, 1));
+            }
+            else
+            {
+                Graphics.Blit(spriteToExport.texture, renderTex, new Vector2(1, -1), new Vector2(0, 1));
+            }
             RenderTexture previous = RenderTexture.active;
             RenderTexture.active = renderTex;
             readableText = fullTextureExport ? new((int)spriteToExport.texture.width, (int)spriteToExport.texture.height) : new((int)spriteToExport.textureRect.width, (int)spriteToExport.textureRect.height);
@@ -161,7 +178,13 @@ namespace Obeliskial_Essentials
             finalImage = fullTextureExport ? new((int)spriteToExport.texture.width, (int)spriteToExport.texture.height) : new((int)spriteToExport.textureRect.width, (int)spriteToExport.textureRect.height);
             for (int i = 0; i < readableText.width; i++)
                 for (int j = 0; j < readableText.height; j++)
-                    finalImage.SetPixel(i, readableText.height - j - 1, readableText.GetPixel(i, j));
+                {
+                    // finalImage.SetPixel(i, readableText.height - j - 1, readableText.GetPixel(i, j));
+                    // UnityE== UnityEngine.OperatingSystemFamily.MacOSX;
+                    int value = Environment.OSVersion.Platform == PlatformID.MacOSX ? j : readableText.height - j - 1;
+                    finalImage.SetPixel(i, value, readableText.GetPixel(i, j));
+                }
+
             finalImage.Apply();
             File.WriteAllBytes(filePath, ImageConversion.EncodeToPNG(finalImage));
             medsExportedSpritePaths.Add(filePath);
@@ -214,6 +237,42 @@ namespace Obeliskial_Essentials
                 else if (!medsVersionText.Contains(newText))
                     medsVersionText += "\n" + newText;
             }
+        }
+
+        public static void UnregisterMod(Mod _mod)
+        {
+            if (medsModAuthors.ContainsKey(_mod.Author.ToLower()))
+            {
+                if (medsModAuthors[_mod.Author.ToLower()].Contains(_mod.Name.ToLower()))
+                {
+                    medsModAuthors[_mod.Author.ToLower()].Remove(_mod.Name.ToLower());
+                }
+                else
+                {
+                    LogError("Attempting to unregister non-registered mod: " + _mod.Author + " - " + _mod.Name);
+
+                }
+
+                // remove from medsMods as well
+                foreach (var key in medsMods.Keys.ToList())
+                {
+                    if (medsMods[key].Author.ToLower() == _mod.Author.ToLower() && medsMods[key].Name.ToLower() == _mod.Name.ToLower())
+                    {
+                        medsMods.Remove(key);
+                        break;
+                    }
+                }
+            }
+
+            // if (_mod.ContentFolder.IsNullOrWhiteSpace()) // no custom content to load
+            //     medsLoadedDependencies[_mod.Author.ToLower().Replace(" ", "_") + "-" + _mod.Name.ToLower().Replace(" ", "_")] = _mod.Version.ToLower();
+            string newText = _mod.Name + " v" + _mod.Version + (_mod.Date == 19920101 ? "" : " (" + _mod.Date.ToString() + ")");
+            if (medsVersionText.IsNullOrWhiteSpace())
+                newText = "";
+            else if (!medsVersionText.Contains(newText))
+                newText += "\n" + newText;
+            medsVersionText = medsVersionText.Replace(newText, "");
+
         }
 
         public static string TextChargesLeft(int currentCharges, int chargesTotal)
@@ -458,12 +517,14 @@ namespace Obeliskial_Essentials
             FolderCreate(Path.Combine(Paths.ConfigPath, "Obeliskial_exported", exportType));
             File.WriteAllText(Path.Combine(Paths.ConfigPath, "Obeliskial_exported", exportType, exportID + ".json"), exportText);
         }
+
         public static bool IsHost()
         {
             if ((GameManager.Instance.IsMultiplayer() && NetworkManager.Instance.IsMaster()) || !GameManager.Instance.IsMultiplayer())
                 return true;
             return false;
         }
+
         public static int TeamHeroToInt(Hero[] medsTeam)
         {
             int team = 0;
@@ -895,7 +956,7 @@ namespace Obeliskial_Essentials
         public static void TomeOfKnowledgeExport(bool exportImages = true, UniverseLib.UI.Models.ButtonRef _btn = null)
         {
             List<string> doneList = new();
-            foreach(string id in Globals.Instance.Cards.Keys)
+            foreach (string id in Globals.Instance.Cards.Keys)
             {
                 CardData card = Globals.Instance.GetCardData(id, false);
                 if (card != null)
@@ -1039,13 +1100,52 @@ namespace Obeliskial_Essentials
             }
             return IDs;
         }
-        public static void MapNodeExport() // exports map node positions into text format
+        public static void MapNodeExport(bool forExcel = false) // exports map node positions into text format
         {
-            Node[] foundNodes = Resources.FindObjectsOfTypeAll<Node>();
-            string s = "name\tzone\tlocalx\tlocaly\tlocalz\tposx\tposy\tposz";
-            foreach (Node n in foundNodes)
-                s += "\n" + n.name + "\t" + n.nodeData.NodeZone.ZoneId + "\t" + n.transform.localPosition.x.ToString() + "\t" + n.transform.localPosition.y.ToString() + "\t" + n.transform.localPosition.z.ToString() + "\t" + n.transform.position.x.ToString() + "\t" + n.transform.position.y.ToString() + "\t" + n.transform.position.z.ToString();
-            File.WriteAllText(Path.Combine(Paths.ConfigPath, "Obeliskial_exported", "nodePos.txt"), s);
+            if (forExcel)
+            {
+                string s = "name\tzone\tlocalx\tlocaly\tlocalz\tposx\tposy\tposz";
+                for (int a = 0; a < MapManager.Instance.mapList.Count; a++)
+                {
+                    foreach (Transform transform1 in MapManager.Instance.mapList[a].transform)
+                    {
+                        if (transform1.gameObject.name == "Nodes")
+                        {
+                            for (int b = 0; b < transform1.childCount; b++)
+                            {
+                                s += "\n" + transform1.GetChild(b).gameObject.name;
+                                Node node = transform1.GetChild(b).gameObject.GetComponent<Node>();
+                                s += "\t" + node.nodeData.NodeZone.ZoneId + "\t" + node.transform.localPosition.x.ToString() + "\t" + node.transform.localPosition.y.ToString() + "\t" + node.transform.localPosition.z.ToString() + "\t" + node.transform.position.x.ToString() + "\t" + node.transform.position.y.ToString() + "\t" + node.transform.position.z.ToString();
+                                medsNodeSource[node.name] = node;
+                            }
+                        }
+                    }
+                }
+                // File.WriteAllText(Path.Combine(Paths.ConfigPath, "Obeliskial_exported", "nodePosForExcel.txt"), s);
+            }
+            else
+            {
+                string s = "name\tzone\tlocalx\tlocaly\tlocalz\tposx\tposy\tposz";
+                for (int a = 0; a < MapManager.Instance.mapList.Count; a++)
+                {
+                    foreach (Transform transform1 in MapManager.Instance.mapList[a].transform)
+                    {
+                        if (transform1.gameObject.name == "Nodes")
+                        {
+                            for (int b = 0; b < transform1.childCount; b++)
+                            {
+                                s += "\n" + transform1.GetChild(b).gameObject.name;
+                                Node node = transform1.GetChild(b).gameObject.GetComponent<Node>();
+                                s += "\t" + node.nodeData.NodeZone.ZoneId + "\t" + node.transform.localPosition.x.ToString() + "\t" + node.transform.localPosition.y.ToString() + "\t" + node.transform.localPosition.z.ToString() + "\t" + node.transform.position.x.ToString() + "\t" + node.transform.position.y.ToString() + "\t" + node.transform.position.z.ToString();
+                                medsNodeSource[node.name] = node;
+                            }
+                        }
+                    }
+                }
+                // FolderCreate(Path.Combine(Paths.ConfigPath, "Obeliskial_exported", "nodePosTXT"));
+                // File.WriteAllText(Path.Combine(Paths.ConfigPath, "Obeliskial_exported", "nodePosTXT", "vanilla.txt"), s);
+                ExtractData(Patches.medsNodeDataSourceGlobal.Select(item => item.Value).ToArray());
+            }
         }
 
         public static void RoadExport(bool forExcel = false) // exports roads into text format
@@ -1080,8 +1180,8 @@ namespace Obeliskial_Essentials
             else
             {
                 // actual roadsTXT
-                string s = @"\\vanilla roadsTXT. Please ONLY use the roads you need for custom paths, because otherwise load times will be significantly increased and interactions between mods may cause errors and strange behaviour!";
-                s += "\n" + @"\\node_from-node_to|(x1,y1),(x2,y2),(x3,y3),(x4,y4),... [etc]";
+                string s = ""; //@"\\vanilla roadsTXT. Please ONLY use the roads you need for custom paths, because otherwise load times will be significantly increased and interactions between mods may cause errors and strange behaviour!";
+                //s += "\n" + @"\\node_from-node_to|(x1,y1),(x2,y2),(x3,y3),(x4,y4),... [etc]";
                 for (int a = 0; a < MapManager.Instance.mapList.Count; a++)
                 {
                     foreach (Transform transform1 in MapManager.Instance.mapList[a].transform)
@@ -1148,6 +1248,7 @@ namespace Obeliskial_Essentials
             Dictionary<string, int> medsCardEnergyCost = new();
             Dictionary<CardType, List<string>> medsCardItemByType = new();
             List<string> medsSortNameID = new();
+            LogDebug("medsCreateCardClones: Starting to set card lists");
             foreach (CardType key in Enum.GetValues(typeof(Enums.CardType)))
             {
                 if (key != Enums.CardType.None)
@@ -1162,6 +1263,7 @@ namespace Obeliskial_Essentials
             foreach (string key in medsCardsSource.Keys)
                 medsCards.Add(key, medsCardsSource[key]);
             StringBuilder stringBuilder = new StringBuilder();
+            LogDebug("medsCreateCardClones: Starting to set card names");
             foreach (string key1 in medsCardsSource.Keys)
             {
                 stringBuilder.Clear();
@@ -1197,7 +1299,7 @@ namespace Obeliskial_Essentials
             medsSortNameID.Sort();
             Dictionary<string, CardData> medsCardsSorted = new();
             Dictionary<string, CardData> medsCardsSourceSorted = new();
-            //LogDebug("READY TO SORT CARDS! " + medsSortNameID.Count);
+            // LogDebug("READY TO SORT CARDS! " + medsSortNameID.Count);
             foreach (string key in medsSortNameID)
             {
                 string cID = key.Split("|")[1];
@@ -1205,43 +1307,59 @@ namespace Obeliskial_Essentials
                 medsCardsSorted[cID] = medsCards[cID];
                 medsCardsSourceSorted[cID] = medsCardsSource[cID];
             }
-            //LogDebug("FINISHED SORTING CARDS!");
+            // LogDebug("FINISHED SORTING CARDS!");
             medsCardsSource = medsCardsSourceSorted;
             medsCards = medsCardsSorted;
+
 
             foreach (string key1 in medsCardsSource.Keys)
             {
                 CardData card = medsCards[key1];
-                if ((card.CardClass != Enums.CardClass.Item || !card.Item.QuestItem) && card.ShowInTome)
+                if (card == null)
                 {
-                    medsCardEnergyCost.Add(card.Id, card.EnergyCost);
-                    Globals.Instance.IncludeInSearch(card.CardName, card.Id);
-                    medsCardListByClass[card.CardClass].Add(card.Id);
-                    if (card.CardUpgraded == Enums.CardUpgraded.No)
+                    LogDebug("medsCreateCardClones: Card is null: " + key1);
+                    continue;
+                }
+                try
+                {
+                    if ((card.CardClass != Enums.CardClass.Item || !card.Item.QuestItem) && card.ShowInTome)
                     {
-                        medsCardListNotUpgradedByClass[card.CardClass].Add(card.Id);
-                        medsCardListNotUpgraded.Add(card.Id);
-                        if (card.CardClass == Enums.CardClass.Item)
+                        medsCardEnergyCost.Add(card.Id, card.EnergyCost);
+                        Globals.Instance.IncludeInSearch(card.CardName, card.Id);
+
+                        medsCardListByClass[card.CardClass].Add(card.Id);
+                        if (card.CardUpgraded == Enums.CardUpgraded.No)
                         {
-                            if (!medsCardItemByType.ContainsKey(card.CardType))
-                                medsCardItemByType.Add(card.CardType, new List<string>());
-                            if (!medsCardItemByType[card.CardType].Contains(card.Id))
-                                medsCardItemByType[card.CardType].Add(card.Id);
+                            medsCardListNotUpgradedByClass[card.CardClass].Add(card.Id);
+                            medsCardListNotUpgraded.Add(card.Id);
+                            if (card.CardClass == Enums.CardClass.Item)
+                            {
+                                if (!medsCardItemByType.ContainsKey(card.CardType))
+                                    medsCardItemByType.Add(card.CardType, new List<string>());
+                                if (!medsCardItemByType[card.CardType].Contains(card.Id))
+                                    medsCardItemByType[card.CardType].Add(card.Id);
+                            }
+                        }
+                        List<Enums.CardType> cardTypes = card.GetCardTypes();
+                        for (int index = 0; index < cardTypes.Count; ++index)
+                        {
+                            medsCardListByType[cardTypes[index]].Add(card.Id);
+                            string key2 = Enum.GetName(typeof(Enums.CardClass), (object)card.CardClass) + "_" + Enum.GetName(typeof(Enums.CardType), (object)cardTypes[index]);
+                            if (!medsCardListByClassType.ContainsKey(key2))
+                                medsCardListByClassType[key2] = new List<string>();
+                            if (!medsCardListByClassType[key2].Contains(card.Id))
+                                medsCardListByClassType[key2].Add(card.Id);
+                            Globals.Instance.IncludeInSearch(Texts.Instance.GetText(Enum.GetName(typeof(Enums.CardType), (object)cardTypes[index])), card.Id);
                         }
                     }
-                    List<Enums.CardType> cardTypes = card.GetCardTypes();
-                    for (int index = 0; index < cardTypes.Count; ++index)
-                    {
-                        medsCardListByType[cardTypes[index]].Add(card.Id);
-                        string key2 = Enum.GetName(typeof(Enums.CardClass), (object)card.CardClass) + "_" + Enum.GetName(typeof(Enums.CardType), (object)cardTypes[index]);
-                        if (!medsCardListByClassType.ContainsKey(key2))
-                            medsCardListByClassType[key2] = new List<string>();
-                        if (!medsCardListByClassType[key2].Contains(card.Id))
-                            medsCardListByClassType[key2].Add(card.Id);
-                        Globals.Instance.IncludeInSearch(Texts.Instance.GetText(Enum.GetName(typeof(Enums.CardType), (object)cardTypes[index])), card.Id);
-                    }
+                }
+                catch (Exception ex)
+                {
+                    LogDebug($"medsCreateCardClones exception for card {key1}. Exception: {ex.Message}");
                 }
             }
+
+            LogDebug("medsCreateCardClones: Setting card lists");
             Traverse.Create(Globals.Instance).Field("_CardListByType").SetValue(medsCardListByType);
             Traverse.Create(Globals.Instance).Field("_CardListByClass").SetValue(medsCardListByClass);
             Traverse.Create(Globals.Instance).Field("_CardListNotUpgraded").SetValue(medsCardListNotUpgraded);
@@ -1375,7 +1493,7 @@ namespace Obeliskial_Essentials
                 }
                 s += "\t" + _wkly.Seed;
             }
-            
+
             /*
             week 1 starts: 9  November 
             week 2 starts: 16 November
@@ -1435,7 +1553,7 @@ namespace Obeliskial_Essentials
                 }
             }
         }
-        
+
         internal static void medsListCorruptors()
         {
             List<string> easy = new();
@@ -1507,6 +1625,12 @@ namespace Obeliskial_Essentials
                 // always open main panel
                 DevTools.ShowUI = true;
             }
+        }
+
+        internal static void RefreshAllContent()
+        {
+            LogDebug("Refreshing all game content...");
+            Globals.Instance.CreateGameContent();
         }
         internal static void medsSkinSpritePositions(SkinData _skin)
         {
@@ -1721,7 +1845,7 @@ namespace Obeliskial_Essentials
                 ActualChecksums(Traverse.Create(Globals.Instance).Field("_TraitsSource").GetValue<Dictionary<string, TraitData>>().Select(item => item.Value).ToArray()),
                 ActualChecksums(Traverse.Create(Globals.Instance).Field("_CardsSource").GetValue<Dictionary<string, CardData>>().Select(item => item.Value).ToArray()),
                 ActualChecksums(Traverse.Create(Globals.Instance).Field("_PerksSource").GetValue<Dictionary<string, PerkData>>().Select(item => item.Value).ToArray()),
-                ActualChecksums(Traverse.Create(Globals.Instance).Field("_AurasCursesSource").GetValue<Dictionary<string, AuraCurseData>>().Select(item => item.Value).ToArray()),
+                //ActualChecksums(Traverse.Create(Globals.Instance).Field("_AurasCursesSource").GetValue<Dictionary<string, AuraCurseData>>().Select(item => item.Value).ToArray()),
                 ActualChecksums(Traverse.Create(Globals.Instance).Field("_NPCsSource").GetValue<Dictionary<string, NPCData>>().Select(item => item.Value).ToArray()),
                 ActualChecksums(Traverse.Create(Globals.Instance).Field("_NodeDataSource").GetValue<Dictionary<string, NodeData>>().Select(item => item.Value).ToArray()),
                 ActualChecksums(Traverse.Create(Globals.Instance).Field("_LootDataSource").GetValue<Dictionary<string, LootData>>().Select(item => item.Value).ToArray()),
@@ -1959,6 +2083,7 @@ namespace Obeliskial_Essentials
             result = "\n\n=================================================================================\n" + data.Length.ToString() + " " + type + " with overall checksum " + result.GetHashCode().ToString() + result;
             return result;
         }
+
 
 
     }

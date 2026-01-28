@@ -3,6 +3,7 @@ using UnityEngine;
 using HarmonyLib;
 using static Obeliskial_Essentials.Essentials;
 using static UnityEngine.JsonUtility;
+using UnityEngine.InputSystem.Utilities;
 
 
 namespace Obeliskial_Essentials
@@ -168,6 +169,12 @@ namespace Obeliskial_Essentials
         {
             return data != null ? data.TierNum.ToString() : "";
         }
+
+        public static string ToString(System.String data)
+        {
+            return data;
+        }
+
         public static string ToString<T>(T data)
         {
             if (typeof(T).BaseType == typeof(Enum))
@@ -281,6 +288,36 @@ namespace Obeliskial_Essentials
                 text[a] = ToJson(ToText(data[a]), true);
             return text;
         }
+
+
+        // New for v1.6.20
+        public static string[] ToString(CardData.AuraBuffs[] data)
+        {
+            string[] text = new string[data.Length];
+            for (int a = 0; a < data.Length; a++)
+                text[a] = ToString(data[a]);
+            return text;
+        }
+        public static string[] ToString(CardData.CurseDebuffs[] data)
+        {
+            string[] text = new string[data.Length];
+            for (int a = 0; a < data.Length; a++)
+                text[a] = ToString(data[a]);
+            return text;
+        }
+        public static string ToString(CardData.AuraBuffs data)
+        {
+            return ToJson(ToText(data), true);
+        }
+        public static string ToString(CardData.CurseDebuffs data)
+        {
+            return ToJson(ToText(data), true);
+        }
+        public static string ToString(SpecialValues data)
+        {
+            return ToJson(ToText(data), true);
+        }
+
         public static string[] ToString<T>(T[] data)
         {
             if (data.Length > 0)
@@ -296,6 +333,7 @@ namespace Obeliskial_Essentials
             }
             return new string[0];
         }
+
         /*
          *                                                                                                           
          *    888888888888  ,ad8888ba,          888888888888  88888888888  8b        d8  888888888888  
@@ -309,6 +347,8 @@ namespace Obeliskial_Essentials
          *
          *   Converts input AtO type to corresponding DataText type.
          */
+
+        // TODO: HealSelfTeamPerDamageDonePercent, HealBasedOnAuraCurse, PetTemporal, PetTemporalCast, PetTemporalMoveToCenter, PetTemporalMoveToBack, PetTemporalFadeOutDelay
         public static CardDataText ToText(CardData data)
         {
             CardDataText text = new();
@@ -318,16 +358,22 @@ namespace Obeliskial_Essentials
             text.AcEnergyBonusQuantity = data.AcEnergyBonusQuantity;
             text.AcEnergyBonus2Quantity = data.AcEnergyBonus2Quantity;
             text.AddCard = data.AddCard;
+            // text.AddCardTypeBasedOnHeroClass = ToString(data.AddCardTypeBasedOnHeroClass); // v1.6.20, potentially not working
             text.AddCardChoose = data.AddCardChoose;
             text.AddCardCostTurn = data.AddCardCostTurn;
             text.AddCardFrom = ToString(data.AddCardFrom);
+            // text.AddCardForModify = ToString(data.AddCardForModify); // v1.6.20 - REMOVED
             text.AddCardId = data.AddCardId;
             text.AddCardList = ToString(data.AddCardList);
+            // text.AddCardListBasedOnHeroClass = ToString(data.AddCardListBasedOnHeroClass); // TODO v1.6.20, potentially not working
+            text.AddCardOnlyCheckAuxTypes = data.AddCardOnlyCheckAuxTypes; // v1.6.20
             text.AddCardPlace = ToString(data.AddCardPlace);
             text.AddCardReducedCost = data.AddCardReducedCost;
             text.AddCardType = ToString(data.AddCardType);
             text.AddCardTypeAux = ToString(data.AddCardTypeAux);
             text.AddCardVanish = data.AddCardVanish;
+            text.AddVanishToDeck = data.AddVanishToDeck; // v1.6.20 
+            text.Auras = ToString(data.Auras); // v1.6.20, potentially not working
             text.Aura = ToString(data.Aura);
             text.Aura2 = ToString(data.Aura2);
             text.Aura3 = ToString(data.Aura3);
@@ -356,12 +402,16 @@ namespace Obeliskial_Essentials
             text.CardType = ToString(data.CardType);
             text.CardTypeAux = ToString(data.CardTypeAux);
             /* CardTypeList is built from CardType and CardTypeAux when GetCardTypes() is called, so we don't need to use it. */
+            text.ChooseOneOfAvailableAuras = data.ChooseOneOfAvailableAuras; // v1.6.20 
             text.CardUpgraded = ToString(data.CardUpgraded);
             text.Corrupted = data.Corrupted;
+            // text.CopyConfig = ToString(data.CopyConfig); // v1.6.20, potentially not working
+            text.Curses = ToString(data.Curses);// v1.6.20, potentially not working
             text.Curse = ToString(data.Curse);
             text.Curse2 = ToString(data.Curse2);
             text.Curse3 = ToString(data.Curse3);
             text.CurseCharges = data.CurseCharges;
+            text.CurseChargesSides = data.CurseChargesSides; // v1.6.20 
             text.CurseChargesSpecialValue1 = data.CurseChargesSpecialValue1;
             text.CurseChargesSpecialValue2 = data.CurseChargesSpecialValue2;
             text.CurseChargesSpecialValueGlobal = data.CurseChargesSpecialValueGlobal;
@@ -392,7 +442,7 @@ namespace Obeliskial_Essentials
             text.DamageType = ToString(data.DamageType);
             text.DamageType2 = ToString(data.DamageType2);
             text.Description = data.Description;
-            // text.DescriptionID = data.descriptionid
+            text.DescriptionID = Traverse.Create(data).Field("descriptionId").GetValue<string>();
             text.DiscardCard = data.DiscardCard;
             text.DiscardCardAutomatic = data.DiscardCardAutomatic;
             text.DiscardCardPlace = ToString(data.DiscardCardPlace);
@@ -528,9 +578,15 @@ namespace Obeliskial_Essentials
             text.Visible = data.Visible;
             if (data.Sprite != null && medsExportJSON.Value && medsExportSprites.Value)
                 ExportSprite(data.Sprite, "card", text.CardClass);
+            text.PetTemporal = data.PetTemporal; //v1.6.20
+            text.PetTemporalCast = data.PetTemporalCast; //v1.6.20
+            text.PetTemporalMoveToCenter = data.PetTemporalMoveToCenter; //v1.6.20
+            text.PetTemporalMoveToBack = data.PetTemporalMoveToBack; //v1.6.20
+            text.PetTemporalFadeOutDelay = data.PetTemporalFadeOutDelay; //v1.6.20
             return text;
         }
 
+        // TODO: ActivateOnRuneTypeAdded, TryActivateOnEveryEvent, MaxBleedDamagePerTurn
         public static TraitDataText ToText(TraitData data)
         {
             TraitDataText text = new();
@@ -575,6 +631,9 @@ namespace Obeliskial_Essentials
             text.TraitCard = ToString(data.TraitCard);
             text.TraitCardForAllHeroes = ToString(data.TraitCardForAllHeroes);
             text.TraitName = data.TraitName;
+            text.ActivateOnRuneTypeAdded = data.ActivateOnRuneTypeAdded; //v1.6.20
+            text.MaxBleedDamagePerTurn = data.MaxBleedDamagePerTurn; //v1.6.20
+            text.TryActivateOnEveryEvent = data.TryActivateOnEveryEvent; //v1.6.20
             return text;
         }
 
@@ -672,6 +731,8 @@ namespace Obeliskial_Essentials
             }
             text.AutoUnlock = data.InitialUnlock; // #XMAS
             text.SourceCharacterName = data.SourceCharacterName;// #XMAS
+            text.CardsSingularity = ToString(data.CardsSingularity); //
+            // LogDebug($"subclassData CardsSingularity {data.Id}: " + text.CardsSingularity);
             return text;
         }
 
@@ -691,6 +752,7 @@ namespace Obeliskial_Essentials
             return text;
         }
 
+        // TODO: AddVanishToDeck, AuraCurseGainSelf3, AuraCurseGainSelfValue3, AuraCurseGain1SpecialValue, AuraCurseGain2SpecialValue, AuraCurseGain3SpecialValue, AuraCurseHeal1, AuraCurseHeal2, AuraCurseHeal3, AuraCurseSetted2, AuraCurseSetted3, ChanceToPurge, ChanceToPurgeNum, ChanceToDispelSelf, ChanceToDispelNumSelf, ChooseOneACToGain, DamageToTargetType2, DamageToTarget2, DttSpecialValues1, DttSpecialValues2, DontTargetBoss, HealQuantitySpecialValue
         public static ItemDataText ToText(ItemData data)
         {
             ItemDataText text = new();
@@ -756,8 +818,8 @@ namespace Obeliskial_Essentials
             text.DamagePercentBonusValue = data.DamagePercentBonusValue;
             text.DamagePercentBonusValue2 = data.DamagePercentBonusValue2;
             text.DamagePercentBonusValue3 = data.DamagePercentBonusValue3;
-            text.DamageToTarget = data.DamageToTarget;
-            text.DamageToTargetType = ToString(data.DamageToTargetType);
+            text.DamageToTarget = data.DamageToTarget1;
+            text.DamageToTargetType = ToString(data.DamageToTargetType1);
             text.DestroyAfterUse = data.DestroyAfterUse;
             text.DestroyAfterUses = data.DestroyAfterUses;
             text.DestroyEndOfTurn = data.DestroyEndOfTurn;
@@ -810,11 +872,25 @@ namespace Obeliskial_Essentials
             text.UsedEnergy = data.UsedEnergy;
             text.UseTheNextInsteadWhenYouPlay = data.UseTheNextInsteadWhenYouPlay;
             text.Vanish = data.Vanish;
-            if (data.SpriteBossDrop != null && medsExportJSON.Value && medsExportSprites.Value)
+            text.AddVanishToDeck = data.AddVanishToDeck; //v1.6.20
+            text.ChanceToDispelNumSelf = data.ChanceToDispelNumSelf; //v1.6.20
+            text.ChanceToDispelSelf = data.ChanceToDispelSelf; //v1.6.20
+            text.ChanceToPurge = data.ChanceToPurge; //v1.6.20
+            text.ChanceToPurgeNum = data.ChanceToPurgeNum; //v1.6.20
+            text.ChooseOneACToGain = data.ChooseOneACToGain; //v1.6.20
+            text.DamageToTarget2 = data.DamageToTarget2; //v1.6.20
+            text.DamageToTargetType2 = ToString(data.DamageToTargetType2); //v1.6.20
+            text.DontTargetBoss = data.DontTargetBoss; //v1.6.20
+            text.DttSpecialValues1 = ToString(data.DttSpecialValues1); //v1.6.20
+            text.DttSpecialValues2 = ToString(data.DttSpecialValues2); //v1.6.20
+            text.HealBasedOnAuraCurse = data.HealBasedOnAuraCurse; //v1.6.20
+            text.HealQuantitySpecialValue = ToString(data.HealQuantitySpecialValue); //v1.6.20
+            text.HealSelfTeamPerDamageDonePercent = data.HealSelfTeamPerDamageDonePercent; //v1.6.20
+            if (data.SpriteBossDrop != null && medsExportJSON.Value && medsExportSprites.Value) //v1.6.20
                 ExportSprite(data.SpriteBossDrop, "item", "SpriteBossDrop");
             return text;
         }
-
+        // TODO: StartsAtObeliskMadnessLevel, StartsAtSingularityMadnessLevel, SpecialSecondTargetID, SecondOnlyCastIf, SecondValueCastIf,
         public static AICardsText ToText(AICards data)
         {
             AICardsText text = new();
@@ -827,8 +903,14 @@ namespace Obeliskial_Essentials
             text.TargetCast = ToString(data.TargetCast);
             text.UnitsInDeck = data.UnitsInDeck;
             text.ValueCastIf = data.ValueCastIf;
+            // text.StartsAtObeliskMadnessLevel = data.StartsAtObeliskMadnessLevel; //v1.6.20
+            // text.StartsAtSingularityMadnessLevel = data.StartsAtSingularityMadnessLevel; //v1.6.20
+            // text.SpecialSecondTargetID = ToString(data.SpecialSecondTargetID); //v1.6.20
+            // text.SecondOnlyCastIf = ToString(data.SecondOnlyCastIf); //v1.6.20
+            // text.SecondValueCastIf = data.SecondValueCastIf; //v1.6.20
             return text;
         }
+        // TODO: GameObjectAnimatedAlternate, SpriteSpeedAlternate, SpritePortraitAlternate, OnlyKillBossWhenHpZero
         public static NPCDataText ToText(NPCData data)
         {
             NPCDataText text = new();
@@ -875,6 +957,10 @@ namespace Obeliskial_Essentials
             text.TierMob = ToString(data.TierMob);
             text.TierReward = ToString(data.TierReward);
             text.UpgradedMob = ToString(data.UpgradedMob);
+            text.GameObjectAnimatedAlternate = ToString(data.GameObjectAnimatedAlternate); //v1.6.20
+            text.OnlyKillBossWhenHpZero = data.OnlyKillBossWhenHpZero; //v1.6.20
+            text.SpritePortraitAlternate = ToString(data.SpritePortraitAlternate); //v1.6.20
+            text.SpriteSpeedAlternate = ToString(data.SpriteSpeedAlternate); //v1.6.20
             if (medsExportJSON.Value && medsExportSprites.Value)
             {
                 LogDebug("exporting NPC: " + text.ID);
@@ -919,6 +1005,7 @@ namespace Obeliskial_Essentials
                 ExportSprite(data.Icon, "perk");
             return text;
         }
+        // TODO: ACBonusData, AuraDamageConditionalBonuses, ConsumeDamageChargesIfACApplied, ChargesPreReqForDamageReflection, ChargesPreReqForGrantBlockToTeamForAmountOfDamageBlocked, DamageReflectedModifierType, DamageReflectedMultiplier, HealTotalOnExplode, HealPerChargeOnExplode, HealTargetOnExplode, ACOnExplode, ACTotalChargesOnExplode, ACChargesPerStackChargeOnExplodeOnExplode, GrantBlockToTeamForAmountOfDamageBlocked
         public static AuraCurseDataText ToText(AuraCurseData data)
         {
             AuraCurseDataText text = new();
@@ -1049,6 +1136,17 @@ namespace Obeliskial_Essentials
             text.Sprite = ToString(data.Sprite);
             text.Stealth = data.Stealth;
             text.Taunt = data.Taunt;
+            text.ACOnExplode = ToString(data.ACOnExplode); //v1.6.20
+            text.ACTotalChargesOnExplode = data.ACTotalChargesOnExplode; //v1.6.20
+            text.ChargesPreReqForDamageReflection = data.ChargesPreReqForDamageReflection; //v1.6.20
+            text.ChargesPreReqForGrantBlockToTeamForAmountOfDamageBlocked = data.ChargesPreReqForGrantBlockToTeamForAmountOfDamageBlocked; //v1.6.20
+            text.ConsumeDamageChargesIfACApplied = ToString(data.ConsumeDamageChargesIfACApplied); //v1.6.20
+            text.DamageReflectedModifierType = ToString(data.DamageReflectedModifierType); //v1.6.20
+            text.DamageReflectedMultiplier = data.DamageReflectedMultiplier; //v1.6.20
+            text.GrantBlockToTeamForAmountOfDamageBlocked = data.GrantBlockToTeamForAmountOfDamageBlocked; //v1.6.20
+            text.HealPerChargeOnExplode = data.HealPerChargeOnExplode; //v1.6.20
+            text.HealTargetOnExplode = ToString(data.HealTargetOnExplode); //v1.6.20
+            text.HealTotalOnExplode = data.HealTotalOnExplode; //v1.6.20
             if (data.Sprite != null && medsExportJSON.Value && medsExportSprites.Value)
                 ExportSprite(data.Sprite, "auraCurse");
             return text;
@@ -1081,6 +1179,11 @@ namespace Obeliskial_Essentials
             text.TravelDestination = data.TravelDestination;
             text.VisibleIfNotRequirement = data.VisibleIfNotRequirement;
             text.SourceNodeName = data.SourceNodeName; // #XMAS
+            if (medsNodeSource.ContainsKey(data.NodeId))
+            {
+                text.medsPosX = medsNodeSource[data.NodeId].transform.position.x;
+                text.medsPosY = medsNodeSource[data.NodeId].transform.position.y;
+            }
             if (data.NodeBackgroundImg != null && medsExportJSON.Value && medsExportSprites.Value)
                 ExportSprite(data.NodeBackgroundImg, "node");
             return text;
@@ -1094,6 +1197,7 @@ namespace Obeliskial_Essentials
             text.DescriptionExtended = data.DescriptionExtended;
             return text;
         }
+        // TODO: AllowDropOnlyItems
         public static LootDataText ToText(LootData data)
         {
             LootDataText text = new();
@@ -1110,6 +1214,7 @@ namespace Obeliskial_Essentials
             text.ShadyScaleY = data.ShadyScaleY; // #XMAS
             text.ShadyOffsetX = data.ShadyOffsetX; // #XMAS
             text.ShadyOffsetY = data.ShadyOffsetY; // #XMAS
+            text.AllowDropOnlyItems = data.AllowDropOnlyItems; //v1.6.20
             return text;
         }
         public static LootItemText ToText(LootItem data)
@@ -1119,6 +1224,7 @@ namespace Obeliskial_Essentials
             text.LootPercent = data.LootPercent;
             text.LootRarity = ToString(data.LootRarity);
             text.LootType = ToString(data.LootType);
+            text.LootMisc = ToString(data.LootMisc);
             return text;
         }
         public static PerkNodeDataText ToText(PerkNodeData data)
@@ -1158,6 +1264,7 @@ namespace Obeliskial_Essentials
             text.Week = data.Week;
             return text;
         }
+        // TODO: IsSingularityTrait, OrderSingularity
         public static ChallengeTraitText ToText(ChallengeTrait data)
         {
             ChallengeTraitText text = new();
@@ -1166,10 +1273,13 @@ namespace Obeliskial_Essentials
             text.IsMadnessTrait = data.IsMadnessTrait;
             text.Name = data.Name;
             text.Order = data.Order;
+            text.IsSingularityTrait = data.IsSingularityTrait; //v1.6.20
+            text.OrderSingularity = data.OrderSingularity; //v1.6.20
             if (data.Icon != null && medsExportJSON.Value && medsExportSprites.Value)
                 ExportSprite(data.Icon, "challengeTrait");
             return text;
         }
+        // TODO: NPCToSummonOnNpcKilled, RandomizeNpcPosition, stepSound
         public static CombatDataText ToText(CombatData data)
         {
             CombatDataText text = new();
@@ -1235,6 +1345,7 @@ namespace Obeliskial_Essentials
             }
             return text;
         }
+        //TODO: TrackCard
         public static EventRequirementDataText ToText(EventRequirementData data)
         {
             EventRequirementDataText text = new();
@@ -1246,6 +1357,7 @@ namespace Obeliskial_Essentials
             text.RequirementTrack = data.RequirementTrack;
             text.TrackSprite = ToString(data.TrackSprite);
             text.ItemTrack = data.ItemTrack;
+            text.TrackCard = ToString(data.TrackCard); //v1.6.20
             // get requirementzonefinishtrack with reflections #TODO: find out if there's some benefit to using traditional reflections vs harmony traverse.create??
             text.RequirementZoneFinishTrack = ToString(Traverse.Create(data).Field("requirementZoneFinishTrack").GetValue<Enums.Zone>());
             if (medsExportJSON.Value && medsExportSprites.Value)
@@ -1257,6 +1369,7 @@ namespace Obeliskial_Essentials
             }
             return text;
         }
+        // TODO: SSItemCorruptionUI, SSCItemCorruptionUI, FLItemCorruptionUI, FLCItemCorruptionUI
         public static EventReplyDataText ToText(EventReplyData data, string medsEvent = "", int a = -1)
         {
             EventReplyDataText text = new();
@@ -1267,6 +1380,10 @@ namespace Obeliskial_Essentials
             text.GoldCost = data.GoldCost;
             text.IndexForAnswerTranslation = data.IndexForAnswerTranslation;
             text.RepeatForAllCharacters = data.RepeatForAllCharacters;
+            text.RepeatForAllWarriors = data.RepeatForAllWarriors;
+            text.RepeatForAllScouts = data.RepeatForAllScouts;
+            text.RepeatForAllMages = data.RepeatForAllMages;
+            text.RepeatForAllHealers = data.RepeatForAllHealers;
             text.ReplyActionText = ToString(data.ReplyActionText);
             text.ReplyShowCard = ToString(data.ReplyShowCard);
             text.ReplyText = data.ReplyText;
@@ -1447,6 +1564,10 @@ namespace Obeliskial_Essentials
             text.FLCUnlockSteamAchievement = data.FlcUnlockSteamAchievement;
             text.FLCUpgradeRandomCard = data.FlcUpgradeRandomCard;
             text.FLCUpgradeUI = data.FlcUpgradeUI;
+            text.FLCItemCorruptionUI = data.FlcItemCorruptionUI; //v1.6.20
+            text.FLItemCorruptionUI = data.FlItemCorruptionUI; //v1.6.20
+            text.SSCItemCorruptionUI = data.SscItemCorruptionUI; //v1.6.20
+            text.SSItemCorruptionUI = data.SsItemCorruptionUI; //v1.6.20
 
             return text;
         }
@@ -1533,6 +1654,7 @@ namespace Obeliskial_Essentials
             text.Card5 = ToString(data.Card5);
             return text;
         }
+        // TODO: CardbackTextId, PdxAccountRequired, SingularityLevel
         public static CardbackDataText ToText(CardbackData data)
         {
             CardbackDataText text = new();
@@ -1549,10 +1671,14 @@ namespace Obeliskial_Essentials
             text.ShowIfLocked = data.ShowIfLocked;
             text.Sku = data.Sku;
             text.SteamStat = data.SteamStat;
+            text.CardbackTextId = data.CardbackTextId; //v1.6.20
+            text.PdxAccountRequired = data.PdxAccountRequired; //v1.6.20
+            text.SingularityLevel = data.SingularityLevel; //v1.6.20
             if (data.CardbackSprite != null && medsExportJSON.Value && medsExportSprites.Value)
                 ExportSprite(data.CardbackSprite, "cardback");
             return text;
         }
+        // TODO: SkinTextId
         public static SkinDataText ToText(SkinData data)
         {
             SkinDataText text = new();
@@ -1569,6 +1695,7 @@ namespace Obeliskial_Essentials
             text.SpriteSilueta = ToString(data.SpriteSilueta);
             text.SpriteSiluetaGrande = ToString(data.SpriteSiluetaGrande);
             text.SteamStat = data.SteamStat;
+            text.SkinTextId = data.SkinTextId;
             if (medsExportJSON.Value && medsExportSprites.Value)
             {
                 if (data.SkinGo != null)
@@ -1688,5 +1815,60 @@ namespace Obeliskial_Essentials
             }
             return PPDT;
         }
+        // Most likely not needed, but here just in case
+
+        public static AuraBuffsText ToText(CardData.AuraBuffs data)
+        {
+            AuraBuffsText text = new();
+            text.aura = ToString(data.aura);
+            text.auraCharges = data.auraCharges;
+            text.auraChargesSpecialValue1 = data.auraChargesSpecialValue1;
+            text.auraChargesSpecialValue2 = data.auraChargesSpecialValue2;
+            text.auraChargesSpecialValueGlobal = data.auraChargesSpecialValueGlobal;
+            text.auraSelf = ToString(data.auraSelf);
+            return text;
+        }
+        public static CurseDebuffsText ToText(CardData.CurseDebuffs data)
+        {
+            CurseDebuffsText text = new();
+            text.curse = ToString(data.curse);
+            text.curseCharges = data.curseCharges;
+            text.curseChargesSpecialValue1 = data.curseChargesSpecialValue1;
+            text.curseChargesSpecialValue2 = data.curseChargesSpecialValue2;
+            text.curseChargesSpecialValueGlobal = data.curseChargesSpecialValueGlobal;
+            text.curseSelf = ToString(data.curseSelf);
+            return text;
+        }
+        public static CardToGainTypeBasedOnHeroClassText ToText(CardData.CardToGainTypeBasedOnHeroClass data)
+        {
+            CardToGainTypeBasedOnHeroClassText text = new();
+            text.cardTypes = ToString(data.cardTypes.ToArray());
+            text.heroClass = ToString(data.heroClass);
+            return text;
+        }
+        public static CardToGainListBasedOnHeroClassText ToText(CardData.CardToGainListBasedOnHeroClass data)
+        {
+            CardToGainListBasedOnHeroClassText text = new();
+            text.cardsList = ToString(data.cardsList.ToArray());
+            text.heroClass = ToString(data.heroClass);
+            return text;
+        }
+        public static SpecialValuesText ToText(SpecialValues data)
+        {
+            SpecialValuesText text = new()
+            {
+                Name = data.Name.ToString(),
+                Use = data.Use,
+                Multiplier = data.Multiplier
+            };
+            return text;
+        }
+
+
+        // public static CopyConfigText ToText(CopyConfig data)
+        // {
+        //     SpecialValuesText text = new();
+        //     return text;
+        // }
     }
 }

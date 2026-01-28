@@ -51,7 +51,7 @@ namespace Obeliskial_Essentials
             //MedsUI MedsPanel = new MedsUI(uiBase);
             uiRoot = UIFactory.CreateUIObject("medsVersionWindow", uiBase.RootObject);
             uiRoot.AddComponent<Image>().color = new Color32(9, 2, 15, 230);
-            
+
             UIFactory.SetLayoutGroup<VerticalLayoutGroup>(uiRoot, false, false, true, true, 5, 8, 8, 8, 8);
             //uiVert = UIFactory.CreateVerticalGroup(uiNav, "medsNavVert", true, false, true, true, 5, new Vector4(4, 4, 4, 4), new Color(0.03f, 0.008f, 0.05f, 0.9f), TextAnchor.UpperLeft);
 
@@ -217,7 +217,8 @@ namespace Obeliskial_Essentials
                     {
                         noError = false;
                         LogError("Failed to add 150 xp to hero " + i.ToString() + ": " + e.Message);
-                    };
+                    }
+                    ;
                 }
                 if (noError)
                     Globals.Instance.StartCoroutine(medsButtonTextRevert(btnPartyXP));
@@ -244,7 +245,8 @@ namespace Obeliskial_Essentials
                 {
                     LogError("Failed to set enemy HP to 1: " + e.Message);
                     Globals.Instance.StartCoroutine(medsButtonTextRevert(btn1HPEnemies, "Error! Please see LogOutput.log!"));
-                };
+                }
+                ;
             });
 
             // Starting Node
@@ -284,7 +286,8 @@ namespace Obeliskial_Essentials
                     LogError("Failed to create card images: " + e.Message);
                     btnCardImageExport.ButtonText.text = "Card Image Export";
                     Globals.Instance.StartCoroutine(medsButtonTextRevert(btnCardImageExport, "Error! Please see LogOutput.log!"));
-                };
+                }
+                ;
             });
 
             // Tome of Knowledge Discord bot data export
@@ -302,7 +305,8 @@ namespace Obeliskial_Essentials
                     LogError("Failed to export Tome of Knowledge bot data: " + e.Message);
                     btnToKDataExport.ButtonText.text = "Tome of Knowledge bot data export";
                     Globals.Instance.StartCoroutine(medsButtonTextRevert(btnToKDataExport, "Error! Please see LogOutput.log!"));
-                };
+                }
+                ;
             });
 
             // Activate Event
@@ -377,6 +381,10 @@ namespace Obeliskial_Essentials
                 }
             });
 
+            ButtonRef btnRefreshContent = UIFactory.CreateButton(devToolsScrollContent, "btnRefreshContent", "Refresh Content");
+            UIFactory.SetLayoutElement(btnRefreshContent.Component.gameObject, minHeight: 25, minWidth: 100);
+            btnRefreshContent.Component.onClick.AddListener(RefreshAllContent);
+
             // caravan shop logger
             ButtonRef btnCaravanShopLog = UIFactory.CreateButton(devToolsScrollContent, "btnCaravanShopLog", "Write Caravan Shop to Log");
             UIFactory.SetLayoutElement(btnCaravanShopLog.Component.gameObject, minWidth: 150, minHeight: 30);
@@ -392,7 +400,7 @@ namespace Obeliskial_Essentials
                     Globals.Instance.StartCoroutine(medsButtonTextRevert(btnCaravanShopLog, "Error getting caravan shop items: " + e.Message));
                 }
             });
-            
+
             // Profile Editor
             btnProfileEditor = UIFactory.CreateButton(devToolsScrollContent, "btnProfileEditor", "Profile Editor");
             UIFactory.SetLayoutElement(btnProfileEditor.Component.gameObject, minWidth: 100, minHeight: 30);
@@ -403,7 +411,8 @@ namespace Obeliskial_Essentials
                 {
                     ProfileEditor.ShowUI = !ProfileEditor.ShowUI;
                 }
-                catch (Exception e) { LogDebug("Failed to open profile editor: " + e.Message); };
+                catch (Exception e) { LogDebug("Failed to open profile editor: " + e.Message); }
+                ;
             });
 
             // Calculate Checksums
@@ -417,7 +426,8 @@ namespace Obeliskial_Essentials
                     CalculateChecksums();
                     btnCalculateChecksums.ButtonText.text = "Done! config\\CHECKSUMS.txt";
                 }
-                catch (Exception e) { LogDebug("Failed to calculate checksums: " + e.Message); };
+                catch (Exception e) { LogDebug("Failed to calculate checksums: " + e.Message); }
+                ;
             });
 
             // Calculate Checksums (FALO ROWI EDITION)
@@ -431,7 +441,8 @@ namespace Obeliskial_Essentials
                     CalculateChecksums(true);
                     btnCalculateChecksumsFaloRowi.ButtonText.text = "Done! config\\CHECKSUMS" + (GameManager.Instance != null && GameManager.Instance.IsMultiplayer() ? "_MP" : "") + ".txt";
                 }
-                catch (Exception e) { LogDebug("Failed to calculate checksums (FALO ROWI EDITION): " + e.Message); };
+                catch (Exception e) { LogDebug("Failed to calculate checksums (FALO ROWI EDITION): " + e.Message); }
+                ;
             });
 
             // Disable AtO Buttons
@@ -495,11 +506,13 @@ namespace Obeliskial_Essentials
         internal static Dictionary<string, Toggle> toggleCardsUnlocked = new();
         internal static Dictionary<string, Toggle> toggleNodesUnlocked = new();
         internal static ButtonRef btnAllHeroesLockUnlock;
+        // internal static ButtonRef btnAllCardbacksLockUnlock;
         internal static InputFieldRef inputAllHeroesRank;
         internal static InputFieldRef inputAllHeroesExperience;
         internal static InputFieldRef inputSupplies;
         internal static InputFieldRef inputAdventureMadness;
-        internal static InputFieldRef inputAdventureMadness2;
+        internal static InputFieldRef inputPerkLevel;
+        internal static InputFieldRef inputSingularityMadness;
         internal static InputFieldRef inputObeliskMadness;
         internal static GameObject profileScroll;
         internal static GameObject profileScrollContent;
@@ -525,6 +538,7 @@ namespace Obeliskial_Essentials
         }
         protected override void ConstructPanelContent()
         {
+            LogDebug("Profile Editor ConstructPanelContent started");
             Text spacer;
             // create close buttons in title bar
             GameObject closeHolder = this.TitleBar.transform.Find("CloseHolder").gameObject;
@@ -573,7 +587,8 @@ namespace Obeliskial_Essentials
                     PlayerManager.Instance.TutorialWatched = new List<string> { "town", "townCraft", "cardsReward", "eventRolls", "characterPerks", "townReward", "firstTurnEnergy", "cardTarget", "combatSpeed", "castNPC", "townItemCraft" };
                     SaveManager.SavePlayerData();
                 }
-                catch (Exception e) { LogError("Failed to complete tutorials: " + e.Message); };
+                catch (Exception e) { LogError("Failed to complete tutorials: " + e.Message); }
+                ;
             });
 
             GameObject horizontalSupplies = UIFactory.CreateUIObject("HoriGroup", profileScrollContent);
@@ -588,6 +603,55 @@ namespace Obeliskial_Essentials
             inputSupplies.Component.textComponent.alignment = TextAnchor.MiddleRight;
             inputSupplies.Component.characterValidation = InputField.CharacterValidation.Integer;
 
+            GameObject binAdvMadness = UIFactory.CreateUIObject("binAdvMadness", profileScrollContent);
+            UIFactory.SetLayoutElement(binAdvMadness, minHeight: 30, flexibleWidth: 9999, flexibleHeight: 30);
+            UIFactory.SetLayoutGroup<HorizontalLayoutGroup>(binAdvMadness, false, false, true, true, 5, 2, childAlignment: TextAnchor.UpperLeft);
+
+            Text labelAdvMadness = UIFactory.CreateLabel(binAdvMadness, "labelAdvMadness", "Adventure Madness");
+            UIFactory.SetLayoutElement(labelAdvMadness.gameObject, minWidth: 60, minHeight: 30);
+
+            inputAdventureMadness = UIFactory.CreateInputField(binAdvMadness, "inputAdventureMadness", "0-10");
+            UIFactory.SetLayoutElement(inputAdventureMadness.Component.gameObject, minWidth: 40, minHeight: 30);
+            inputAdventureMadness.Component.textComponent.alignment = TextAnchor.MiddleRight;
+            inputAdventureMadness.Component.characterValidation = InputField.CharacterValidation.Integer;
+
+            GameObject binObMadness = UIFactory.CreateUIObject("binObMadness", profileScrollContent);
+            UIFactory.SetLayoutElement(binObMadness, minHeight: 30, flexibleWidth: 9999, flexibleHeight: 30);
+            UIFactory.SetLayoutGroup<HorizontalLayoutGroup>(binObMadness, false, false, true, true, 5, 2, childAlignment: TextAnchor.UpperLeft);
+
+            Text labelObMadness = UIFactory.CreateLabel(binObMadness, "labelObMadness", "Obelisk Madness");
+            UIFactory.SetLayoutElement(labelObMadness.gameObject, minWidth: 60, minHeight: 30);
+
+            inputObeliskMadness = UIFactory.CreateInputField(binObMadness, "inputObeliskMadness", "0-10");
+            UIFactory.SetLayoutElement(inputObeliskMadness.Component.gameObject, minWidth: 40, minHeight: 30);
+            inputObeliskMadness.Component.textComponent.alignment = TextAnchor.MiddleRight;
+            inputObeliskMadness.Component.characterValidation = InputField.CharacterValidation.Integer;
+
+            GameObject binSingMadness = UIFactory.CreateUIObject("binObMadness", profileScrollContent);
+            UIFactory.SetLayoutElement(binSingMadness, minHeight: 30, flexibleWidth: 9999, flexibleHeight: 30);
+            UIFactory.SetLayoutGroup<HorizontalLayoutGroup>(binSingMadness, false, false, true, true, 5, 2, childAlignment: TextAnchor.UpperLeft);
+
+            Text labelSingMadness = UIFactory.CreateLabel(binSingMadness, "labelSingMadness", "Singularity Madness");
+            UIFactory.SetLayoutElement(labelSingMadness.gameObject, minWidth: 60, minHeight: 30);
+
+            inputSingularityMadness = UIFactory.CreateInputField(binSingMadness, "inputObeliskMadness", "0-10");
+            UIFactory.SetLayoutElement(inputSingularityMadness.Component.gameObject, minWidth: 40, minHeight: 30);
+            inputSingularityMadness.Component.textComponent.alignment = TextAnchor.MiddleRight;
+            inputSingularityMadness.Component.characterValidation = InputField.CharacterValidation.Integer;
+
+            GameObject binPerkLevel = UIFactory.CreateUIObject("binPerkLevel", profileScrollContent);
+            UIFactory.SetLayoutElement(binPerkLevel, minHeight: 30, flexibleWidth: 9999, flexibleHeight: 30);
+            UIFactory.SetLayoutGroup<HorizontalLayoutGroup>(binPerkLevel, false, false, true, true, 5, 2, childAlignment: TextAnchor.UpperLeft);
+
+            Text labelPerkLevel = UIFactory.CreateLabel(binPerkLevel, "labelPerkLevel", "Perk Level");
+            UIFactory.SetLayoutElement(labelPerkLevel.gameObject, minWidth: 60, minHeight: 30);
+
+            inputPerkLevel = UIFactory.CreateInputField(binPerkLevel, "inputPerkLevel", "0-50");
+            UIFactory.SetLayoutElement(inputPerkLevel.Component.gameObject, minWidth: 40, minHeight: 30);
+            inputPerkLevel.Component.textComponent.alignment = TextAnchor.MiddleRight;
+            inputPerkLevel.Component.characterValidation = InputField.CharacterValidation.Integer;
+
+            LogDebug("Profile Editor ConstructPanelContent: Creating heroes");
             // heroes 
             // create container + accordion
             GameObject GOHeroes = UIFactory.CreateUIObject("medsHeroes", profileScrollContent);
@@ -674,7 +738,7 @@ namespace Obeliskial_Essentials
                 rank = UIFactory.CreateLabel(GOSCDHorizontal, "labelRank" + scd.Id, "Rank:");
                 UIFactory.SetLayoutElement(rank.gameObject, minWidth: 40, minHeight: 30);
                 rank.alignment = TextAnchor.MiddleRight;
-                inputHeroesRank[scd.Id] = UIFactory.CreateInputField(GOSCDHorizontal, "medsHeroesRank" + scd.Id,"");
+                inputHeroesRank[scd.Id] = UIFactory.CreateInputField(GOSCDHorizontal, "medsHeroesRank" + scd.Id, "");
                 inputHeroesRank[scd.Id].Component.textComponent.alignment = TextAnchor.MiddleRight;
                 inputHeroesRank[scd.Id].Component.characterValidation = InputField.CharacterValidation.Integer;
                 inputHeroesRank[scd.Id].Component.onValueChanged.AddListener((newRank) => { HeroRankUpdate(scd.Id, newRank); });
@@ -695,6 +759,7 @@ namespace Obeliskial_Essentials
 
 
             // cards 
+            LogDebug("Profile Editor ConstructPanelContent: Creating cards");
             int maxColumns = 4;
             // ensure order
             cardsByCategory["Warrior"] = new();
@@ -760,6 +825,7 @@ namespace Obeliskial_Essentials
             so worth doing IF hacky workaround not required. Maybe give it a bit more detailed think 
 
             */
+            LogDebug("Profile Editor ConstructPanelContent: Creating card categories");
             foreach (string cardCategory in cardsByCategory.Keys)
             {
                 cardsByCategory[cardCategory].Sort();
@@ -809,6 +875,7 @@ namespace Obeliskial_Essentials
                 }
                 GOCardsCategories[cardCategory].gameObject.SetActive(false);
             }
+            LogDebug("Profile Editor ConstructPanelContent: Creating card categories done");
             GOCardsCategories["All"].gameObject.SetActive(false);
 
 
@@ -840,6 +907,12 @@ namespace Obeliskial_Essentials
                 toggleHeroesUnlocked[scID].isOn = btnAllHeroesLockUnlock.ButtonText.text != "Lock All";
             btnAllHeroesLockUnlock.ButtonText.text = btnAllHeroesLockUnlock.ButtonText.text == "Lock All" ? "Unlock All" : "Lock All";
         }
+        // internal static void AllCardbackLockUnlock()
+        // {
+        //     foreach (string cardbackId in toggleCardbacksUnlocked.Keys)
+        //         toggleCardbacksUnlocked[cardbackId].isOn = btnAllCardbacksLockUnlock.ButtonText.text != "Lock All";
+        //     btnAllCardbacksLockUnlock.ButtonText.text = btnAllCardbacksLockUnlock.ButtonText.text == "Lock All" ? "Unlock All" : "Lock All";
+        // }
         internal static void AllHeroesRankUpdate(string _newRank)
         {
             if (int.TryParse(_newRank, out int iNewRank) && int.TryParse(inputAllHeroesExperience.Text, out int iNewXP))
@@ -931,6 +1004,10 @@ namespace Obeliskial_Essentials
         {
             LogInfo("LOADING PLAYER PROFILE!");
             inputSupplies.Component.SetTextWithoutNotify(PlayerManager.Instance.SupplyActual.ToString());
+            inputAdventureMadness.Component.SetTextWithoutNotify(PlayerManager.Instance.NgLevel.ToString());
+            inputObeliskMadness.Component.SetTextWithoutNotify(PlayerManager.Instance.ObeliskMadnessLevel.ToString());
+            inputSingularityMadness.Component.SetTextWithoutNotify(PlayerManager.Instance.SingularityMadnessLevel.ToString());
+            inputPerkLevel.Component.SetTextWithoutNotify(PlayerManager.Instance.GetPlayerRankProgress().ToString());
             btnAllHeroesLockUnlock.ButtonText.text = "Lock All";
             foreach (string scID in toggleHeroesUnlocked.Keys)
             {
@@ -945,7 +1022,7 @@ namespace Obeliskial_Essentials
                     btnAllHeroesLockUnlock.ButtonText.text = "Unlock All";
             }
             btnCardsLockUnlock["All"].ButtonText.text = "Lock All Cards";
-            foreach(string cardCategory in cardsByCategory.Keys)
+            foreach (string cardCategory in cardsByCategory.Keys)
             {
                 btnCardsLockUnlock[cardCategory].ButtonText.text = "Lock All " + cardCategory.Replace("Accesory", "Accessory") + " Cards";
                 foreach (string sCard in cardsByCategory[cardCategory])
@@ -967,6 +1044,19 @@ namespace Obeliskial_Essentials
             LogInfo("SAVING PROFILE");
             if (int.TryParse(inputSupplies.Text, out int newSupplies))
                 PlayerManager.Instance.SupplyActual = newSupplies;
+
+            if (int.TryParse(inputAdventureMadness.Text, out int adventure))
+                PlayerManager.Instance.NgLevel = adventure;
+
+            if (int.TryParse(inputPerkLevel.Text, out int perkLevel))
+                PlayerManager.Instance.SetPlayerRankProgress(perkLevel);
+
+            if (int.TryParse(inputObeliskMadness.Text, out int obeliskMadness))
+                PlayerManager.Instance.ObeliskMadnessLevel = obeliskMadness;
+
+            if (int.TryParse(inputSingularityMadness.Text, out int singularityMadness))
+                PlayerManager.Instance.SingularityMadnessLevel = singularityMadness;
+
             List<string> unlockedHeroes = new();
             foreach (string scID in toggleHeroesUnlocked.Keys)
             {
